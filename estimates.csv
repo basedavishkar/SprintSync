@@ -1,0 +1,12 @@
+Story,Task,Estimate min (hr),Estimate max (hr),Actual,Comment
+Backend,Project setup - FastAPI scaffolding and Swagger docs,0.5,1.5,,Initial setup with auto docs
+Backend,Auth - JWT login signup and User CRUD,1.5,2.5,,User creation and token handling
+Backend,Task CRUD and status transition endpoint,2,3,,Main Task API endpoints
+AI Assist,ai suggest - LLM call and stub fallback,2,2.5,,OpenAI integration and test stub
+Observability,Structured logging and metrics endpoint,1.5,2,,Request logs and Prometheus style JSON
+DevOps,Dockerfile docker-compose and cloud deploy,1.5,2,,Containerized app and Railway deployment
+Database,DB schema and seed demo data,0.25,0.5,,Models and initial seed records
+Testing,2 unit tests and 1 integration test for ai suggest,1.5,1.5,,Using FastAPI TestClient and pytest
+Polish,Cleanup README and Loom walkthrough,1,1,,Final polish and video recording
+,,,
+Total,,12h,16h,,
