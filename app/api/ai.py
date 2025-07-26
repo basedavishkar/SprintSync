@@ -1,10 +1,10 @@
 import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.dependencies.auth import get_current_user
-from typing import Optional
-import requests
+from app.models.database_models import User
+from google import genai
 
 load_dotenv()
 
@@ -12,54 +12,92 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 class SuggestRequest(BaseModel):
-    title: Optional[str] = None
-    mode: Optional[str] = "draft"  # "draft" or "plan"
+    title: str = None
+    mode: str = "draft"  # "draft" or "plan"
 
 
 class SuggestResponse(BaseModel):
     suggestion: str
 
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+def get_gemini_client():
+    """Get Gemini client with API key."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return None
+    
+    return genai.Client(api_key=api_key)
 
 
 @router.post("/suggest", response_model=SuggestResponse)
-def ai_suggest(
-    req: SuggestRequest, current_user=Depends(get_current_user)
+async def suggest_task(
+    req: SuggestRequest,
+    current_user: User = Depends(get_current_user)
 ):
-    if OPENAI_API_KEY:
-        # Real LLM call (OpenAI)
-        if req.mode == "draft" and req.title:
-            prompt = f"Draft a concise, clear task description for: {req.title}"
-        else:
-            prompt = f"Give a concise daily plan for user: {current_user.username}"
+    """AI-powered task suggestion endpoint."""
+    
+    # Check if we have API key for real AI calls
+    gemini_client = get_gemini_client()
+    
+    use_real_ai = os.getenv("USE_REAL_AI", "false").lower() == "true"
+    
+    if gemini_client and use_real_ai:
+        # Real AI call with Gemini 2.5 Flash
         try:
-            response = requests.post(
-                "https://api.openai.com/v1/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENAI_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "text-davinci-003",
-                    "prompt": prompt,
-                    "max_tokens": 60,
-                },
-                timeout=10,
-            )
-            response.raise_for_status()
-            data = response.json()
-            suggestion = data["choices"][0]["text"].strip()
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"LLM error: {e}")
-        return SuggestResponse(suggestion=suggestion)
+            if req.mode == "draft" and req.title:
+                title = req.title
+                prompt = f"""Draft a professional task description for: {title}
+                
+                Requirements:
+                - Be concise but comprehensive
+                - Focus on technical implementation details
+                - Use professional language
+                - Include acceptance criteria if relevant
+                
+                Description:"""
+                
+                response = gemini_client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+                return SuggestResponse(suggestion=response.text)
+            else:
+                username = current_user.username
+                prompt = f"""Create a concise daily plan for user {username}.
+                
+                Focus on:
+                - Priority tasks for today
+                - Time estimates
+                - Key deliverables
+                - Blockers to address
+                
+                Daily Plan:"""
+                
+                response = gemini_client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+                return SuggestResponse(suggestion=response.text)
+                
+        except Exception:
+            # Fallback to stub if AI call fails
+            if req.mode == "draft" and req.title:
+                return SuggestResponse(
+                    suggestion=f"[FALLBACK] Description for: {req.title}"
+                )
+            else:
+                username = current_user.username
+                return SuggestResponse(
+                    suggestion=f"[FALLBACK] Plan for user: {username}"
+                )
+    
+    # Deterministic stub for tests/CI
+    if req.mode == "draft" and req.title:
+        return SuggestResponse(
+            suggestion=f"[STUB] Description for: {req.title}"
+        )
     else:
-        # Deterministic stub for tests/CI
-        if req.mode == "draft" and req.title:
-            return SuggestResponse(
-                suggestion=f"[STUB] Description for: {req.title}"
-            )
-        else:
-            return SuggestResponse(
-                suggestion=f"[STUB] Plan for user: {current_user.username}"
-            ) 
+        username = current_user.username
+        return SuggestResponse(
+            suggestion=f"[STUB] Plan for user: {username}"
+        ) 
