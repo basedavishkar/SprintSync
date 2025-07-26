@@ -11,6 +11,14 @@ import time
 import json
 import sys
 import traceback
+from app.database import engine, Base
+from app.seed_data import seed_database
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
+# Seed database with demo data
+seed_database()
 
 app = FastAPI()
 

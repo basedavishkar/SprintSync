@@ -201,3 +201,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Alembic
+alembic/versions/*.py
+!alembic/versions/__init__.py

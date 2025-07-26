@@ -10,14 +10,18 @@ load_dotenv()
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
+
 class SuggestRequest(BaseModel):
     title: Optional[str] = None
     mode: Optional[str] = "draft"  # "draft" or "plan"
 
+
 class SuggestResponse(BaseModel):
     suggestion: str
 
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 
 @router.post("/suggest", response_model=SuggestResponse)
 def ai_suggest(
@@ -52,6 +56,10 @@ def ai_suggest(
     else:
         # Deterministic stub for tests/CI
         if req.mode == "draft" and req.title:
-            return SuggestResponse(suggestion=f"[STUB] Description for: {req.title}")
+            return SuggestResponse(
+                suggestion=f"[STUB] Description for: {req.title}"
+            )
         else:
-            return SuggestResponse(suggestion=f"[STUB] Plan for user: {current_user.username}") 
+            return SuggestResponse(
+                suggestion=f"[STUB] Plan for user: {current_user.username}"
+            ) 
