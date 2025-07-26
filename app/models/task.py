@@ -13,7 +13,7 @@ class TaskCreate(TaskBase):
 class TaskRead(TaskBase):
     id: int
     created_at: datetime
-    user_id: str
+    user_id: int  # Changed from str to int
 
 class TaskInDB(TaskRead):
     pass
