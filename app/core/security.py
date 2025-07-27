@@ -105,4 +105,52 @@ def get_current_user_from_cookie(
     except Exception:
         pass
     
-    return None 
+    return None
+
+
+def get_current_user_web(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current user from either cookie or Authorization header."""
+    # Try cookie first (for web interface)
+    token = request.cookies.get("token")
+    
+    if not token:
+        # Try Authorization header (for API calls)
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1]
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    payload = decode_token(token)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    username: str = payload.get("sub")
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return user 

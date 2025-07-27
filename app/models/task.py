@@ -15,6 +15,7 @@ class Task(Base):
     title = Column(String, nullable=False)
     description = Column(Text)
     status = Column(String, default="todo")  # todo, in_progress, done
+    total_minutes = Column(Integer, default=0)
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -28,6 +29,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str = ""
     status: str = "todo"
+    total_minutes: int = 0
 
 
 class TaskRead(BaseModel):
@@ -35,6 +37,7 @@ class TaskRead(BaseModel):
     title: str
     description: str
     status: str
+    total_minutes: int
     user_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -45,4 +48,5 @@ class TaskRead(BaseModel):
 class TaskUpdate(BaseModel):
     title: str = None
     description: str = None
-    status: str = None 
+    status: str = None
+    total_minutes: int = None 

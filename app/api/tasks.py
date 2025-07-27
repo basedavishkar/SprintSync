@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.models.task import TaskCreate, TaskRead
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_user_web
 from app.core.database import get_db
 from app.services.task_service import TaskService
 
@@ -83,7 +83,7 @@ def change_status(
     request: Request,
     task_id: int, 
     status: str = Form(...), 
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user_web),
     db: Session = Depends(get_db)
 ):
     """Change task status and return HTML for HTMX."""

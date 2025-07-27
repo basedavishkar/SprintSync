@@ -10,13 +10,13 @@ templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register")
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+@router.post("/signup")
+def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
     user_service = UserService(db)
     try:
         user = user_service.create_user(user_data)
-        return {"message": "User created successfully", "user_id": user.id}
+        return {"username": user.username, "user_id": user.id}
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -35,7 +35,7 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
