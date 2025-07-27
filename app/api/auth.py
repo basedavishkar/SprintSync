@@ -1,45 +1,43 @@
-from fastapi import APIRouter, HTTPException, Depends
-from passlib.context import CryptContext
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.models.user import UserCreate, UserLogin, UserRead, UserInDB
-from app.models.database_models import User
+from app.core.database import get_db
 from app.core.security import create_access_token
-from app.database import get_db
+from app.models.user import UserCreate, UserLogin
+from app.services.user_service import UserService
 
+templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-@router.post("/signup", response_model=UserRead)
-def signup(user: UserCreate, db: Session = Depends(get_db)):
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.username == user.username).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    # Create new user
-    hashed_password = pwd_context.hash(user.password)
-    db_user = User(
-        username=user.username,
-        hashed_password=hashed_password,
-        is_admin=False
-    )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    return UserRead(username=db_user.username)
+@router.post("/register")
+def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    """Register a new user."""
+    user_service = UserService(db)
+    try:
+        user = user_service.create_user(user_data)
+        return {"message": "User created successfully", "user_id": user.id}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 @router.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Find user in database
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if not db_user or not pwd_context.verify(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    """Login user and return access token."""
+    user_service = UserService(db)
+    user = user_service.authenticate_user(
+        user_data.username, user_data.password
+    )
     
-    # Create access token
-    access_token = create_access_token({"sub": db_user.username})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"} 

@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Form, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import List
-from app.models.task import (
-    TaskCreate, TaskRead,
-    TimeLogCreate, TimeLogRead,
-    EstimateCreate, EstimateRead
-)
-from app.models.database_models import Task, TimeLog, Estimate
-from app.dependencies.auth import get_current_user
-from app.database import get_db
+from app.models.task import TaskCreate, TaskRead
+
+from app.core.security import get_current_user
+from app.core.database import get_db
+from app.services.task_service import TaskService
+
+templates = Jinja2Templates(directory="app/templates")
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -19,16 +20,9 @@ def create_task(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    db_task = Task(
-        title=task.title,
-        description=task.description,
-        status=task.status,
-        user_id=current_user.id
-    )
-    db.add(db_task)
-    db.commit()
-    db.refresh(db_task)
-    return db_task
+    """Create a new task."""
+    task_service = TaskService(db)
+    return task_service.create_task(task, current_user)
 
 
 @router.get("/", response_model=List[TaskRead])
@@ -36,8 +30,9 @@ def list_tasks(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    tasks = db.query(Task).filter(Task.user_id == current_user.id).all()
-    return tasks
+    """Get all tasks for the current user."""
+    task_service = TaskService(db)
+    return task_service.get_user_tasks(current_user.id)
 
 
 @router.get("/{task_id}", response_model=TaskRead)
@@ -46,10 +41,9 @@ def get_task(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
+    """Get a specific task by ID."""
+    task_service = TaskService(db)
+    task = task_service.get_task_by_id(task_id, current_user.id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
@@ -62,20 +56,12 @@ def update_task(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    db_task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
-    if not db_task:
+    """Update a task."""
+    task_service = TaskService(db)
+    updated_task = task_service.update_task(task_id, current_user.id, task)
+    if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
-    db_task.title = task.title
-    db_task.description = task.description
-    db_task.status = task.status
-    
-    db.commit()
-    db.refresh(db_task)
-    return db_task
+    return updated_task
 
 
 @router.delete("/{task_id}")
@@ -84,128 +70,29 @@ def delete_task(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
-    if not task:
+    """Delete a task."""
+    task_service = TaskService(db)
+    success = task_service.delete_task(task_id, current_user.id)
+    if not success:
         raise HTTPException(status_code=404, detail="Task not found")
-    
-    db.delete(task)
-    db.commit()
-    return {"ok": True}
+    return ""  # Return empty string for HTMX to remove the element
 
 
-@router.post("/{task_id}/status", response_model=TaskRead)
+@router.post("/{task_id}/status", response_class=HTMLResponse)
 def change_status(
+    request: Request,
     task_id: int, 
-    status: str, 
+    status: str = Form(...), 
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
+    """Change task status and return HTML for HTMX."""
+    task_service = TaskService(db)
+    task = task_service.update_task_status(task_id, current_user.id, status)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    task.status = status
-    db.commit()
-    db.refresh(task)
-    return task
-
-
-# TimeLog endpoints
-@router.post("/{task_id}/timelogs", response_model=TimeLogRead)
-def create_timelog(
-    task_id: int, 
-    timelog: TimeLogCreate, 
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Check if task exists and belongs to user
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    duration = None
-    if timelog.end_time:
-        duration = (timelog.end_time - timelog.start_time).total_seconds() / 60.0
-    
-    db_timelog = TimeLog(
-        task_id=task_id,
-        start_time=timelog.start_time,
-        end_time=timelog.end_time,
-        duration=duration
-    )
-    db.add(db_timelog)
-    db.commit()
-    db.refresh(db_timelog)
-    return db_timelog
-
-
-@router.get("/{task_id}/timelogs", response_model=List[TimeLogRead])
-def list_timelogs(
-    task_id: int, 
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Check if task belongs to user
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    timelogs = db.query(TimeLog).filter(TimeLog.task_id == task_id).all()
-    return timelogs
-
-
-# Estimate endpoints
-@router.post("/{task_id}/estimates", response_model=EstimateRead)
-def create_estimate(
-    task_id: int, 
-    estimate: EstimateCreate, 
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Check if task exists and belongs to user
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    db_estimate = Estimate(
-        task_id=task_id,
-        estimated_min=estimate.estimated_min,
-        estimated_max=estimate.estimated_max
-    )
-    db.add(db_estimate)
-    db.commit()
-    db.refresh(db_estimate)
-    return db_estimate
-
-
-@router.get("/{task_id}/estimates", response_model=List[EstimateRead])
-def list_estimates(
-    task_id: int, 
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Check if task belongs to user
-    task = db.query(Task).filter(
-        Task.id == task_id, 
-        Task.user_id == current_user.id
-    ).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    estimates = db.query(Estimate).filter(Estimate.task_id == task_id).all()
-    return estimates 
+    return templates.TemplateResponse("task_card.html", {
+        "request": request,
+        "task": task
+    }) 

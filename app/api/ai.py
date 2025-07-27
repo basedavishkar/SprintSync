@@ -1,10 +1,11 @@
-import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from app.dependencies.auth import get_current_user
-from app.models.database_models import User
-from google import genai
+from sqlalchemy.orm import Session
+from app.core.security import get_current_user
+from app.core.database import get_db
+from app.models.user import User
+from app.services.ai_service import ai_service
 
 load_dotenv()
 
@@ -20,84 +21,38 @@ class SuggestResponse(BaseModel):
     suggestion: str
 
 
-def get_gemini_client():
-    """Get Gemini client with API key."""
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return None
-    
-    return genai.Client(api_key=api_key)
-
-
 @router.post("/suggest", response_model=SuggestResponse)
 async def suggest_task(
     req: SuggestRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """AI-powered task suggestion endpoint."""
     
-    # Check if we have API key for real AI calls
-    gemini_client = get_gemini_client()
-    
-    use_real_ai = os.getenv("USE_REAL_AI", "false").lower() == "true"
-    
-    if gemini_client and use_real_ai:
-        # Real AI call with Gemini 2.5 Flash
-        try:
-            if req.mode == "draft" and req.title:
-                title = req.title
-                prompt = f"""Draft a professional task description for: {title}
-                
-                Requirements:
-                - Be concise but comprehensive
-                - Focus on technical implementation details
-                - Use professional language
-                - Include acceptance criteria if relevant
-                
-                Description:"""
-                
-                response = gemini_client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt
-                )
-                return SuggestResponse(suggestion=response.text)
-            else:
-                username = current_user.username
-                prompt = f"""Create a concise daily plan for user {username}.
-                
-                Focus on:
-                - Priority tasks for today
-                - Time estimates
-                - Key deliverables
-                - Blockers to address
-                
-                Daily Plan:"""
-                
-                response = gemini_client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt
-                )
-                return SuggestResponse(suggestion=response.text)
-                
-        except Exception:
-            # Fallback to stub if AI call fails
-            if req.mode == "draft" and req.title:
-                return SuggestResponse(
-                    suggestion=f"[FALLBACK] Description for: {req.title}"
-                )
-            else:
-                username = current_user.username
-                return SuggestResponse(
-                    suggestion=f"[FALLBACK] Plan for user: {username}"
-                )
-    
-    # Deterministic stub for tests/CI
-    if req.mode == "draft" and req.title:
-        return SuggestResponse(
-            suggestion=f"[STUB] Description for: {req.title}"
-        )
-    else:
-        username = current_user.username
-        return SuggestResponse(
-            suggestion=f"[STUB] Plan for user: {username}"
+    try:
+        if req.mode == "draft" and req.title:
+            suggestion = ai_service.generate_task_description(req.title)
+        else:
+            # Get user's actual tasks for context
+            from app.services.task_service import TaskService
+            task_service = TaskService(db)
+            user_tasks = task_service.get_user_tasks(current_user.id)
+            
+            # Convert to list of dicts for AI service
+            tasks_data = [
+                {"title": task.title, "status": task.status} 
+                for task in user_tasks
+            ]
+            
+            suggestion = ai_service.generate_daily_plan(
+                current_user.username, 
+                tasks_data
+            )
+        
+        return SuggestResponse(suggestion=suggestion)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to generate AI suggestion: {str(e)}"
         ) 
