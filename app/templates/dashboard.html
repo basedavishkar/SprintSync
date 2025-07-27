@@ -117,8 +117,11 @@
                             </div>
 
                             <div class="flex space-x-2">
-                                <form hx-post="/tasks/{{ task.id }}/status" hx-target="closest .bg-gray-50" hx-swap="outerHTML">
-                                    <select name="status" onchange="this.form.submit()" class="text-xs border rounded px-2 py-1">
+                                <form hx-post="/tasks/{{ task.id }}/status" 
+                                      hx-target="closest .bg-gray-50" 
+                                      hx-swap="outerHTML"
+                                      hx-trigger="change">
+                                    <select name="status" class="text-xs border rounded px-2 py-1">
                                         <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>Todo</option>
                                         <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
                                         <option value="done" {% if task.status == 'done' %}selected{% endif %}>Done</option>

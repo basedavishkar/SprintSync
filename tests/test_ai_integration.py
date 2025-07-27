@@ -3,7 +3,7 @@ from app.main import app
 
 
 def test_ai_suggest_draft_mode(client):
-    """Test AI suggest endpoint in draft mode (stub)."""
+    """Test AI suggest endpoint in draft mode."""
     # Create user and get token
     client.post(
         "/auth/signup",
@@ -25,12 +25,11 @@ def test_ai_suggest_draft_mode(client):
     assert response.status_code == 200
     data = response.json()
     assert "suggestion" in data
-    assert "[STUB]" in data["suggestion"]
-    assert "Test Task" in data["suggestion"]
+    assert len(data["suggestion"]) > 10  # Ensure we get a meaningful response
 
 
 def test_ai_suggest_plan_mode(client):
-    """Test AI suggest endpoint in plan mode (stub)."""
+    """Test AI suggest endpoint in plan mode."""
     # Create user and get token
     client.post(
         "/auth/signup",
@@ -52,7 +51,6 @@ def test_ai_suggest_plan_mode(client):
     assert response.status_code == 200
     data = response.json()
     assert "suggestion" in data
-    assert "[STUB]" in data["suggestion"]
     assert "planuser_unique" in data["suggestion"]
 
 

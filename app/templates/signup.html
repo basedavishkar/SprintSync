@@ -50,7 +50,7 @@ document.getElementById('signupForm').addEventListener('submit', async function(
     const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch('/auth/register', {
+        const response = await fetch('/auth/signup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,9 +63,26 @@ document.getElementById('signupForm').addEventListener('submit', async function(
 
         if (response.ok) {
             const data = await response.json();
-            // Store token in cookie
-            document.cookie = `token=${data.access_token}; path=/`;
-            window.location.href = '/dashboard';
+            // After signup, we need to login to get the token
+            const loginResponse = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+            
+            if (loginResponse.ok) {
+                const loginData = await loginResponse.json();
+                // Store token in cookie
+                document.cookie = `token=${loginData.access_token}; path=/`;
+                window.location.href = '/dashboard';
+            } else {
+                showToast('Account created but login failed', 'error');
+            }
         } else {
             const errorData = await response.json();
             showToast(errorData.detail || 'Signup failed', 'error');
