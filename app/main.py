@@ -1,18 +1,20 @@
-from fastapi import FastAPI, Depends
-from fastapi.responses import PlainTextResponse
-from fastapi.requests import Request
-from typing import Dict
-from app.api.auth import router as auth_router
-from app.api.tasks import router as tasks_router
-from app.api.ai import router as ai_router
-from app.dependencies.auth import get_current_user
-from app.models.user import UserRead
+from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import time
 import json
 import sys
 import traceback
-from app.database import engine, Base
+
+from app.core.config import settings
+from app.core.database import engine, Base
 from app.seed_data import seed_database
+
+# Import routers
+from app.api.auth import router as auth_router
+from app.api.tasks import router as tasks_router
+from app.api.ai import router as ai_router
+from app.web_routes import router as web_router
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -20,24 +22,44 @@ Base.metadata.create_all(bind=engine)
 # Seed database with demo data
 seed_database()
 
-app = FastAPI()
+# Initialize FastAPI app
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.version,
+    debug=settings.debug
+)
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Include routers
 app.include_router(auth_router)
 app.include_router(tasks_router)
 app.include_router(ai_router)
+app.include_router(web_router)
 
 
-# In-memory metrics storage
-metrics: Dict[str, int] = {"requests": 0, "errors": 0}
+# Metrics storage
+metrics = {"requests": 0, "errors": 0}
 
 
 @app.middleware("http")
 async def observability_middleware(request: Request, call_next):
+    """Middleware for request logging and metrics."""
     start_time = time.time()
     metrics["requests"] += 1
-    
+
+    # Extract user ID from JWT if present
     user_id = None
-    # Try to extract userId from JWT if present
     auth_header = request.headers.get("authorization")
     if auth_header and auth_header.lower().startswith("bearer "):
         token = auth_header.split(" ", 1)[1]
@@ -47,13 +69,13 @@ async def observability_middleware(request: Request, call_next):
             user_id = payload.get("sub") if payload else None
         except Exception:
             user_id = None
-    
+
     log_data = {
         "method": request.method,
         "path": request.url.path,
         "userId": user_id,
     }
-    
+
     try:
         response = await call_next(request)
         latency = time.time() - start_time
@@ -76,15 +98,11 @@ async def observability_middleware(request: Request, call_next):
         raise
 
 
-@app.get("/metrics", response_class=PlainTextResponse)
+@app.get("/metrics")
 def get_metrics():
+    """Get application metrics."""
     lines = [
         f"requests_total {metrics['requests']}",
         f"errors_total {metrics['errors']}"
     ]
     return "\n".join(lines)
-
-
-@app.get("/users/me", response_model=UserRead)
-def read_users_me(current_user=Depends(get_current_user)):
-    return {"username": current_user.username}

@@ -1,2 +1,35 @@
-fastapi
-pytest
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+starlette==0.27.0
+
+# Database & ORM
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+
+# Authentication & Security
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.6
+
+# Data Validation & Settings
+pydantic==2.11.7
+pydantic-settings==2.10.1
+
+# AI Integration
+google-genai==1.2.0
+google-auth==2.40.3
+
+# Templates & Frontend
+jinja2==3.1.2
+
+# HTTP Client
+httpx==0.25.2
+
+# Environment & Configuration
+python-dotenv==1.0.0
+
+# Testing
+pytest==7.4.2
+
