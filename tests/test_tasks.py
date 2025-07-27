@@ -9,24 +9,24 @@ def test_create_task(client):
     # First create a user and get token
     client.post(
         "/auth/signup",
-        json={"username": "taskuser_unique", "password": "testpass123"}
+        json={"username": "taskuser_unique", "password": "testpass123"},
     )
-    
+
     login_response = client.post(
         "/auth/login",
-        json={"username": "taskuser_unique", "password": "testpass123"}
+        json={"username": "taskuser_unique", "password": "testpass123"},
     )
     token = login_response.json()["access_token"]
-    
+
     # Create task
     response = client.post(
         "/tasks/",
         json={
             "title": "Test Task",
             "description": "Test task description",
-            "status": "todo"
+            "status": "todo",
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -39,26 +39,29 @@ def test_list_tasks(client):
     # Create user and get token
     client.post(
         "/auth/signup",
-        json={"username": "listuser_unique", "password": "testpass123"}
+        json={"username": "listuser_unique", "password": "testpass123"},
     )
-    
+
     login_response = client.post(
         "/auth/login",
-        json={"username": "listuser_unique", "password": "testpass123"}
+        json={"username": "listuser_unique", "password": "testpass123"},
     )
     token = login_response.json()["access_token"]
-    
+
     # Create a task first
     client.post(
         "/tasks/",
-        json={"title": "List Test Task", "description": "Test", "status": "todo"},
-        headers={"Authorization": f"Bearer {token}"}
+        json={
+            "title": "List Test Task",
+            "description": "Test",
+            "status": "todo",
+        },
+        headers={"Authorization": f"Bearer {token}"},
     )
-    
+
     # List tasks
     response = client.get(
-        "/tasks/",
-        headers={"Authorization": f"Bearer {token}"}
+        "/tasks/", headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -71,28 +74,32 @@ def test_update_task_status(client):
     # Create user and get token
     client.post(
         "/auth/signup",
-        json={"username": "statususer_unique", "password": "testpass123"}
+        json={"username": "statususer_unique", "password": "testpass123"},
     )
-    
+
     login_response = client.post(
         "/auth/login",
-        json={"username": "statususer_unique", "password": "testpass123"}
+        json={"username": "statususer_unique", "password": "testpass123"},
     )
     token = login_response.json()["access_token"]
-    
+
     # Create a task
     create_response = client.post(
         "/tasks/",
-        json={"title": "Status Test Task", "description": "Test", "status": "todo"},
-        headers={"Authorization": f"Bearer {token}"}
+        json={
+            "title": "Status Test Task",
+            "description": "Test",
+            "status": "todo",
+        },
+        headers={"Authorization": f"Bearer {token}"},
     )
     task_id = create_response.json()["id"]
-    
+
     # Update status using form data
     response = client.post(
         f"/tasks/{task_id}/status",
         data={"status": "in_progress"},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    # The response is HTML, so we just check the status code 
+    # The response is HTML, so we just check the status code

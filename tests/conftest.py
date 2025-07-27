@@ -9,10 +9,11 @@ from app.core.database import get_db, Base
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine
+)
 
 
 def override_get_db():
@@ -27,13 +28,13 @@ def override_get_db():
 def client():
     # Create tables
     Base.metadata.create_all(bind=engine)
-    
+
     # Override dependency
     app.dependency_overrides[get_db] = override_get_db
-    
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     # Clean up
     Base.metadata.drop_all(bind=engine)
-    app.dependency_overrides.clear() 
+    app.dependency_overrides.clear()

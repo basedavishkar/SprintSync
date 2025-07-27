@@ -10,7 +10,7 @@ from typing import Optional
 # SQLAlchemy Model
 class Task(Base):
     __tablename__ = "tasks"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
@@ -19,7 +19,7 @@ class Task(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationship
     user = relationship("User", back_populates="tasks")
 
@@ -41,7 +41,7 @@ class TaskRead(BaseModel):
     user_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -49,4 +49,4 @@ class TaskUpdate(BaseModel):
     title: str = None
     description: str = None
     status: str = None
-    total_minutes: int = None 
+    total_minutes: int = None

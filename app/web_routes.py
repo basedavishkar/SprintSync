@@ -20,8 +20,7 @@ router = APIRouter(tags=["web"])
 async def home(request: Request):
     """Redirect root to dashboard."""
     return RedirectResponse(
-        url="/dashboard",
-        status_code=status.HTTP_302_FOUND
+        url="/dashboard", status_code=status.HTTP_302_FOUND
     )
 
 
@@ -57,19 +56,17 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 
     if not current_user:
         return RedirectResponse(
-            url="/login",
-            status_code=status.HTTP_302_FOUND
+            url="/login", status_code=status.HTTP_302_FOUND
         )
 
     # Get user's tasks using service
     task_service = TaskService(db)
     tasks = task_service.get_user_tasks(current_user.id)
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": current_user,
-        "tasks": tasks
-    })
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "user": current_user, "tasks": tasks},
+    )
 
 
 @router.get("/debug/tasks", response_class=HTMLResponse)
@@ -83,26 +80,33 @@ async def debug_tasks(request: Request, db: Session = Depends(get_db)):
 
     for user in users:
         tasks = task_service.get_user_tasks(user.id)
-        user_info.append({
-            'username': user.username,
-            'user_id': user.id,
-            'task_count': len(tasks),
-            'tasks': [{'id': t.id, 'title': t.title, 'status': t.status,
-                      'created_at': t.created_at} for t in tasks]
-        })
+        user_info.append(
+            {
+                "username": user.username,
+                "user_id": user.id,
+                "task_count": len(tasks),
+                "tasks": [
+                    {
+                        "id": t.id,
+                        "title": t.title,
+                        "status": t.status,
+                        "created_at": t.created_at,
+                    }
+                    for t in tasks
+                ],
+            }
+        )
 
-    return templates.TemplateResponse("debug_tasks.html", {
-        "request": request,
-        "users": user_info
-    })
+    return templates.TemplateResponse(
+        "debug_tasks.html", {"request": request, "users": user_info}
+    )
 
 
 @router.post("/auth/logout", response_class=HTMLResponse)
 async def logout(request: Request):
     """Handle logout."""
     response = RedirectResponse(
-        url="/login",
-        status_code=status.HTTP_302_FOUND
+        url="/login", status_code=status.HTTP_302_FOUND
     )
     response.delete_cookie(key="token")
     return response

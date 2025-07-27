@@ -8,13 +8,13 @@ from app.core.database import Base
 # SQLAlchemy Model
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationship
     tasks = relationship("Task", back_populates="user")
 
@@ -30,11 +30,11 @@ class UserRead(BaseModel):
     username: str
     is_admin: bool
     created_at: str
-    
+
     class Config:
         from_attributes = True
 
 
 class UserLogin(BaseModel):
     username: str
-    password: str 
+    password: str

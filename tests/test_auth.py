@@ -1,11 +1,8 @@
-import pytest
-from fastapi.testclient import TestClient
-
 def test_user_signup(client):
     """Test user signup endpoint."""
     response = client.post(
         "/auth/signup",
-        json={"username": "testuser_unique", "password": "testpass123"}
+        json={"username": "testuser_unique", "password": "testpass123"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -17,13 +14,13 @@ def test_user_login(client):
     # First create a user
     client.post(
         "/auth/signup",
-        json={"username": "logintest_unique", "password": "testpass123"}
+        json={"username": "logintest_unique", "password": "testpass123"},
     )
-    
+
     # Then login
     response = client.post(
         "/auth/login",
-        json={"username": "logintest_unique", "password": "testpass123"}
+        json={"username": "logintest_unique", "password": "testpass123"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -36,13 +33,13 @@ def test_duplicate_signup(client):
     # Create user first time
     client.post(
         "/auth/signup",
-        json={"username": "duplicate_unique", "password": "testpass123"}
+        json={"username": "duplicate_unique", "password": "testpass123"},
     )
-    
+
     # Try to create same user again
     response = client.post(
         "/auth/signup",
-        json={"username": "duplicate_unique", "password": "testpass123"}
+        json={"username": "duplicate_unique", "password": "testpass123"},
     )
     assert response.status_code == 400
     assert "already registered" in response.json()["detail"]
@@ -52,7 +49,7 @@ def test_invalid_login(client):
     """Test login with invalid credentials."""
     response = client.post(
         "/auth/login",
-        json={"username": "nonexistent", "password": "wrongpass"}
+        json={"username": "nonexistent", "password": "wrongpass"},
     )
     assert response.status_code == 401
-    assert "Invalid credentials" in response.json()["detail"] 
+    assert "Invalid credentials" in response.json()["detail"]

@@ -20,11 +20,11 @@ from app.web_routes import router as web_router
 # Configure structured logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log')  # Also log to file for production
-    ]
+        logging.FileHandler("app.log"),  # Also log to file for production
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -36,9 +36,7 @@ seed_database()
 
 # Initialize FastAPI app
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.version,
-    debug=settings.debug
+    title=settings.app_name, version=settings.version, debug=settings.debug
 )
 
 # Add CORS middleware
@@ -65,7 +63,7 @@ metrics = {
     "requests": 0,
     "errors": 0,
     "start_time": time.time(),
-    "response_times": []
+    "response_times": [],
 }
 
 
@@ -91,6 +89,7 @@ async def observability_middleware(request: Request, call_next):
     if token:
         try:
             from app.core.security import decode_token
+
             payload = decode_token(token)
             user_id = payload.get("sub") if payload else None
         except Exception:
@@ -108,26 +107,30 @@ async def observability_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
         latency = time.time() - start_time
-        log_data.update({
-            "status_code": response.status_code,
-            "latency_ms": int(latency * 1000),
-            "level": "INFO"
-        })
-        
+        log_data.update(
+            {
+                "status_code": response.status_code,
+                "latency_ms": int(latency * 1000),
+                "level": "INFO",
+            }
+        )
+
         # Use proper structured logging
         logger.info("Request processed", extra=log_data)
         return response
     except Exception as exc:
         metrics["errors"] += 1
         latency = time.time() - start_time
-        log_data.update({
-            "status_code": 500,
-            "latency_ms": int(latency * 1000),
-            "error": str(exc),
-            "stack_trace": traceback.format_exc(),
-            "level": "ERROR"
-        })
-        
+        log_data.update(
+            {
+                "status_code": 500,
+                "latency_ms": int(latency * 1000),
+                "error": str(exc),
+                "stack_trace": traceback.format_exc(),
+                "level": "ERROR",
+            }
+        )
+
         # Log error with full context
         logger.error("Request failed", extra=log_data, exc_info=True)
         raise
@@ -155,7 +158,7 @@ def get_metrics():
         "# HELP app_version_info Application version information",
         "# TYPE app_version_info gauge",
         f'app_version_info{{version="{settings.version}",'
-        f'app="{settings.app_name}"}} 1'
+        f'app="{settings.app_name}"}} 1',
     ]
 
     return "\n".join(lines)

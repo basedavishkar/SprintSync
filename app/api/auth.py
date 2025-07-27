@@ -19,8 +19,7 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         return {"username": user.username, "user_id": user.id}
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         )
 
 
@@ -31,13 +30,13 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
     user = user_service.authenticate_user(
         user_data.username, user_data.password
     )
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"} 
+    return {"access_token": access_token, "token_type": "bearer"}
