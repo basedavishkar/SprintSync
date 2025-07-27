@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SprintSync{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">SprintSync</h1>
+                    <p class="text-gray-600">Welcome back, {{ user.username }}!</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                                        <button 
+                        data-action="open-modal"
+                        class="btn-primary">
+                        + New Task
+                    </button>
+                    <form method="POST" action="/auth/logout" class="inline">
+                        <button type="submit" class="text-gray-600 hover:text-gray-800 text-sm">
+                            Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- AI Suggestions Section -->
+        <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">AI-Powered Suggestions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Task Description Generator -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Generate Task Description</h3>
+                    <div class="space-y-3">
+                        <input
+                            type="text"
+                            id="aiTaskTitle"
+                            placeholder="Enter task title (e.g., 'eat healthy')"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button
+                            data-action="ai-suggest"
+                            data-mode="draft"
+                            class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                            Generate Description
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Daily Plan Generator -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Daily Productivity Plan</h3>
+                    <button
+                        data-action="ai-suggest"
+                        data-mode="plan"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Generate Daily Plan
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI Response Display -->
+            <div id="aiResponse" class="mt-6 p-4 bg-gray-50 rounded-md hidden">
+                <h4 class="font-medium text-gray-900 mb-2">AI Suggestion:</h4>
+                <div id="aiResponseText" class="text-gray-700 whitespace-pre-wrap"></div>
+            </div>
+        </div>
+
+        <!-- Tasks Section -->
+        <div class="bg-white rounded-lg shadow-sm border">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold text-gray-900">Your Tasks</h2>
+                    <div class="flex items-center space-x-4">
+                        <button
+                            data-action="test-create"
+                            class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
+                            Test Create
+                        </button>
+                        <span class="text-sm text-gray-600">
+                            Total: {{ tasks|length }} tasks
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6">
+                {% if tasks %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for task in tasks %}
+                        <div class="bg-gray-50 rounded-lg p-4 border">
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="font-medium text-gray-900">{{ task.title }}</h3>
+                                <span class="px-2 py-1 text-xs rounded-full
+                                    {% if task.status == 'todo' %}bg-yellow-100 text-yellow-800
+                                    {% elif task.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                    {% elif task.status == 'done' %}bg-green-100 text-green-800
+                                    {% endif %}">
+                                    {{ task.status.replace('_', ' ').title() }}
+                                </span>
+                            </div>
+
+                            {% if task.description %}
+                            <p class="text-gray-600 text-sm mb-3">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
+                            {% endif %}
+
+                            <div class="flex justify-between items-center text-xs text-gray-500 mb-3">
+                                <span>Created: {{ task.created_at.strftime('%Y-%m-%d') }}</span>
+                                {% if task.total_minutes %}
+                                <span>{{ task.total_minutes }} min</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex space-x-2">
+                                <form hx-post="/tasks/{{ task.id }}/status" hx-target="closest .bg-gray-50" hx-swap="outerHTML">
+                                    <select name="status" onchange="this.form.submit()" class="text-xs border rounded px-2 py-1">
+                                        <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>Todo</option>
+                                        <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                        <option value="done" {% if task.status == 'done' %}selected{% endif %}>Done</option>
+                                    </select>
+                                </form>
+
+                                <button
+                                    onclick="deleteTask({{ task.id }})"
+                                    class="text-xs text-red-600 hover:text-red-800">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-12">
+                        <div class="text-gray-400 mb-4">
+                            <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
+                        <p class="text-gray-600 mb-4">Get started by creating your first task!</p>
+                        <button
+                            data-action="open-modal"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                            Create Your First Task
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Create Task Modal -->
+<div id="createTaskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Create New Task</h3>
+                <button
+                    data-action="close-modal"
+                    class="text-gray-400 hover:text-gray-600 text-xl font-bold">
+                    ×
+                </button>
+            </div>
+
+            <form id="createTaskForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="taskTitle" class="block text-sm font-medium text-gray-700 mb-1">
+                            Task Title *
+                        </label>
+                        <input
+                            type="text"
+                            id="taskTitle"
+                            name="title"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                            Description
+                        </label>
+                        <textarea
+                            id="taskDescription"
+                            name="description"
+                            rows="4"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
+                            Status
+                        </label>
+                        <select
+                            id="taskStatus"
+                            name="status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="todo">Todo</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button
+                        type="button"
+                        data-action="close-modal"
+                        class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Create Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dashboard.js"></script>
+
+
+{% endblock %}

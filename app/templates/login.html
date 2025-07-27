@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Login - SprintSync{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Sign in to SprintSync
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Or
+                <a href="/signup" class="font-medium text-blue-600 hover:text-blue-500">
+                    create a new account
+                </a>
+            </p>
+        </div>
+
+        <form class="mt-8 space-y-6" id="loginForm">
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div>
+                    <label for="username" class="sr-only">Username</label>
+                    <input id="username" name="username" type="text" required
+                           class="form-input-top"
+                           placeholder="Username">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input id="password" name="password" type="password" required
+                           class="form-input-bottom"
+                           placeholder="Password">
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" class="btn-primary w-full">
+                    Sign in
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Store token in cookie
+            document.cookie = `token=${data.access_token}; path=/`;
+            window.location.href = '/dashboard';
+        } else {
+            const errorData = await response.json();
+            showToast(errorData.detail || 'Login failed', 'error');
+        }
+    } catch (error) {
+        showToast('An error occurred during login', 'error');
+    }
+});
+</script>
+{% endblock %}

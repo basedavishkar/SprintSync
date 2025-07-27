@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SprintSync{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    {% block content %}{% endblock %}
+
+    <!-- Toast Container -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+        <div class="bg-white border-l-4 p-4 shadow-lg rounded">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div id="toast-icon" class="w-5 h-5"></div>
+                </div>
+                <div class="ml-3">
+                    <p id="toast-message" class="text-sm font-medium text-gray-900"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="hideToast()" class="text-gray-400 hover:text-gray-600">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const messageEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            messageEl.textContent = message;
+
+            // Set icon and colors based on type
+            if (type === 'error') {
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>';
+                toast.querySelector('.border-l-4').classList.add('border-red-400');
+            } else if (type === 'success') {
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>';
+                toast.querySelector('.border-l-4').classList.add('border-green-400');
+            } else {
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>';
+                toast.querySelector('.border-l-4').classList.add('border-blue-400');
+            }
+
+            toast.classList.remove('hidden');
+
+            // Auto-hide after 5 seconds
+            setTimeout(hideToast, 5000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('hidden');
+            // Reset border classes
+            toast.querySelector('.border-l-4').classList.remove('border-red-400', 'border-green-400', 'border-blue-400');
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

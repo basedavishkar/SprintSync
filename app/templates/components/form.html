@@ -1,0 +1,26 @@
+<!-- Reusable Form Component -->
+<form method="POST" action="{{ action_url }}" class="space-y-6">
+    <div>
+        <label for="username" class="block text-sm font-medium text-gray-700">
+            Username
+        </label>
+        <input id="username" name="username" type="text" required 
+               class="form-input-top"
+               placeholder="Enter your username">
+    </div>
+    
+    <div>
+        <label for="password" class="block text-sm font-medium text-gray-700">
+            Password
+        </label>
+        <input id="password" name="password" type="password" required 
+               class="form-input-bottom"
+               placeholder="Enter your password">
+    </div>
+    
+    <div>
+        <button type="submit" class="btn-primary w-full">
+            {{ submit_text }}
+        </button>
+    </div>
+</form> 

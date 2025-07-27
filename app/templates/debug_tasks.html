@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Tasks - SprintSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Database Debug - Tasks</h1>
+
+        <div class="space-y-6">
+            {% for user in users %}
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">
+                    User: {{ user.username }} (ID: {{ user.user_id }})
+                </h2>
+                <p class="text-gray-600 mb-4">Total tasks: {{ user.task_count }}</p>
+
+                {% if user.tasks %}
+                <div class="space-y-2">
+                    {% for task in user.tasks %}
+                    <div class="bg-gray-50 p-3 rounded border">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-medium">ID: {{ task.id }}</span>
+                                <span class="ml-4 text-gray-700">{{ task.title }}</span>
+                            </div>
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if task.status == 'todo' %}bg-gray-100 text-gray-800
+                                {% elif task.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                {% elif task.status == 'done' %}bg-green-100 text-green-800
+                                {% endif %}">
+                                {{ task.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 italic">No tasks found for this user.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-8">
+            <a href="/dashboard" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>
