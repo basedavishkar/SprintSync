@@ -28,28 +28,36 @@ def seed_database():
         else:
             print("Admin user already exists.")
 
-        # Check if we already have users (skip demo seeding if so)
-        existing_users = db.query(User).count()
-        if existing_users > 1:  # admin already handled above
-            print("Database already seeded, skipping demo users/tasks...")
+        # Check if demo users already exist
+        demo_users_exist = db.query(User).filter(User.username.in_(["user1", "user2", "user3"])).count() >= 3
+        
+        if demo_users_exist:
+            print("Demo users already exist, skipping demo user creation...")
+        else:
+            print("Creating demo users...")
+            # Create demo users
+            users = []
+            for i in range(1, 4):
+                username = f"user{i}"
+                hashed_password = get_password_hash("password123")
+                user = User(
+                    username=username,
+                    hashed_password=hashed_password,
+                    is_admin=False,
+                )
+                db.add(user)
+                users.append(user)
+
+            db.commit()
+            print(f"✅ Created {len(users)} demo users")
+
+        # Check if tasks already exist
+        existing_tasks = db.query(Task).count()
+        if existing_tasks > 0:
+            print("Tasks already exist, skipping task creation...")
             return
 
-        print("Seeding database with AI development demo data...")
-
-        # Create demo users
-        users = []
-        for i in range(1, 4):
-            username = f"user{i}"
-            hashed_password = get_password_hash("password123")
-            user = User(
-                username=username,
-                hashed_password=hashed_password,
-                is_admin=False,
-            )
-            db.add(user)
-            users.append(user)
-
-        db.commit()
+        print("Creating demo tasks...")
 
         # AI Development Task Templates
         ai_tasks = [
@@ -176,9 +184,7 @@ def seed_database():
         ]
 
         # Assign tasks to users with realistic distribution
-        all_users = [
-            db.query(User).filter_by(username="admin").first()
-        ] + users
+        all_users = db.query(User).all()  # Get all users including admin and demo users
         for i, user in enumerate(all_users):
             # Each user gets 4-6 tasks
             num_tasks = random.randint(4, 6)
@@ -200,7 +206,7 @@ def seed_database():
 
         db.commit()
         print(
-            f"✅ Created {len(all_users)} users (including admin) and {len(all_users) * 5} AI development tasks"
+            f"✅ Created {len(all_users)} users and {len(all_users) * 5} AI development tasks"
         )
         print("👑 Admin user: username='admin', password='admin123'")
         print("📋 Sample tasks include:")
@@ -217,5 +223,44 @@ def seed_database():
         db.close()
 
 
+def force_reseed_demo_users():
+    """Force re-seed demo users (for production fixes)."""
+    db = SessionLocal()
+
+    try:
+        print("Force re-seeding demo users...")
+        
+        # Delete existing demo users
+        demo_users = db.query(User).filter(User.username.in_(["user1", "user2", "user3"])).all()
+        for user in demo_users:
+            db.delete(user)
+        
+        # Create new demo users
+        users = []
+        for i in range(1, 4):
+            username = f"user{i}"
+            hashed_password = get_password_hash("password123")
+            user = User(
+                username=username,
+                hashed_password=hashed_password,
+                is_admin=False,
+            )
+            db.add(user)
+            users.append(user)
+
+        db.commit()
+        print(f"✅ Re-created {len(users)} demo users")
+        
+    except Exception as e:
+        print(f"❌ Error re-seeding demo users: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
-    seed_database()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--force-reseed":
+        force_reseed_demo_users()
+    else:
+        seed_database()
