@@ -35,7 +35,7 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
     if not user_data.username or not user_data.password:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Username and password are required."
+            detail="Username and password are required.",
         )
     user_service = UserService(db)
     user = user_service.authenticate_user(
@@ -53,7 +53,11 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/users", response_model=List[UserRead], responses={403: {"model": ErrorResponse}})
+@router.get(
+    "/users",
+    response_model=List[UserRead],
+    responses={403: {"model": ErrorResponse}},
+)
 def list_users(
     current_user: UserRead = Depends(get_current_user_web),
     db: Session = Depends(get_db),

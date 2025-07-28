@@ -17,7 +17,12 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 class ErrorResponse(BaseModel):
     detail: str = Field(..., example="Not authenticated")
 
-@router.post("/", response_model=TaskRead, responses={401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+
+@router.post(
+    "/",
+    response_model=TaskRead,
+    responses={401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
 def create_task(
     task: TaskCreate,
     current_user=Depends(get_current_user_web),
@@ -25,12 +30,19 @@ def create_task(
 ):
     """Create a new task."""
     if not task.title or not task.status:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Title and status are required.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title and status are required.",
+        )
     task_service = TaskService(db)
     return task_service.create_task(task, current_user)
 
 
-@router.get("/", response_model=List[TaskRead], responses={401: {"model": ErrorResponse}})
+@router.get(
+    "/",
+    response_model=List[TaskRead],
+    responses={401: {"model": ErrorResponse}},
+)
 def list_tasks(
     current_user=Depends(get_current_user_web), db: Session = Depends(get_db)
 ):
@@ -39,7 +51,11 @@ def list_tasks(
     return task_service.get_user_tasks(current_user.id)
 
 
-@router.get("/{task_id}", response_model=TaskRead, responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}})
+@router.get(
+    "/{task_id}",
+    response_model=TaskRead,
+    responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}},
+)
 def get_task(
     task_id: int,
     current_user=Depends(get_current_user_web),
@@ -53,7 +69,15 @@ def get_task(
     return task
 
 
-@router.put("/{task_id}", response_model=TaskRead, responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+@router.put(
+    "/{task_id}",
+    response_model=TaskRead,
+    responses={
+        404: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+    },
+)
 def update_task(
     task_id: int,
     task: TaskCreate,
@@ -62,7 +86,10 @@ def update_task(
 ):
     """Update a task."""
     if not task.title or not task.status:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Title and status are required.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title and status are required.",
+        )
     task_service = TaskService(db)
     updated_task = task_service.update_task(task_id, current_user.id, task)
     if not updated_task:
@@ -70,7 +97,10 @@ def update_task(
     return updated_task
 
 
-@router.delete("/{task_id}", responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}})
+@router.delete(
+    "/{task_id}",
+    responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}},
+)
 def delete_task(
     task_id: int,
     current_user=Depends(get_current_user_web),
@@ -84,7 +114,15 @@ def delete_task(
     return {"success": True}
 
 
-@router.post("/{task_id}/status", response_class=HTMLResponse, responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+@router.post(
+    "/{task_id}/status",
+    response_class=HTMLResponse,
+    responses={
+        404: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+    },
+)
 def change_status(
     request: Request,
     task_id: int,
@@ -94,7 +132,10 @@ def change_status(
 ):
     """Change task status and return HTML for HTMX."""
     if status not in ["todo", "in_progress", "done"]:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid status value.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid status value.",
+        )
     task_service = TaskService(db)
     task = task_service.update_task_status(task_id, current_user.id, status)
     if not task:
