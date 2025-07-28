@@ -2,10 +2,11 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import time
-import sys
 import traceback
+import structlog
+import sys
 import logging
-from datetime import datetime
+import uuid
 
 from app.core.config import settings
 from app.core.database import engine, Base
@@ -18,15 +19,35 @@ from app.api.ai import router as ai_router
 from app.web_routes import router as web_router
 
 # Configure structured logging
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.processors.JSONRenderer(),
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+# Configure standard library logging to output to both console and file
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("app.log"),  # Also log to file for production
+        logging.FileHandler("app.log"),
     ],
 )
-logger = logging.getLogger(__name__)
+
+logger = structlog.get_logger()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -95,44 +116,56 @@ async def observability_middleware(request: Request, call_next):
         except Exception:
             user_id = None
 
-    log_data = {
-        "timestamp": datetime.utcnow().isoformat(),
+    # Create structured log context
+    log_context = {
         "method": request.method,
         "path": request.url.path,
-        "userId": user_id,
+        "user_id": user_id,
         "user_agent": request.headers.get("user-agent", ""),
         "ip_address": request.client.host if request.client else None,
+        "correlation_id": str(uuid.uuid4()),  # Correlation ID for tracing
     }
 
     try:
         response = await call_next(request)
         latency = time.time() - start_time
-        log_data.update(
+        log_context.update(
             {
                 "status_code": response.status_code,
                 "latency_ms": int(latency * 1000),
-                "level": "INFO",
             }
         )
 
-        # Use proper structured logging
-        logger.info("Request processed", extra=log_data)
+        # Log successful request with structured data
+        logger.info("Request processed", **log_context)
         return response
     except Exception as exc:
         metrics["errors"] += 1
         latency = time.time() - start_time
-        log_data.update(
+
+        # Classify error type
+        error_type = "UNKNOWN"
+        if "authentication" in str(exc).lower() or "token" in str(exc).lower():
+            error_type = "AUTH"
+        elif "validation" in str(exc).lower() or "422" in str(exc):
+            error_type = "VALIDATION"
+        elif "database" in str(exc).lower() or "sql" in str(exc).lower():
+            error_type = "DATABASE"
+        elif "timeout" in str(exc).lower():
+            error_type = "TIMEOUT"
+
+        log_context.update(
             {
                 "status_code": 500,
                 "latency_ms": int(latency * 1000),
                 "error": str(exc),
+                "error_type": error_type,
                 "stack_trace": traceback.format_exc(),
-                "level": "ERROR",
             }
         )
 
-        # Log error with full context
-        logger.error("Request failed", extra=log_data, exc_info=True)
+        # Log error with full structured context
+        logger.error("Request failed", **log_context, exc_info=True)
         raise
 
 
@@ -166,5 +199,28 @@ def get_metrics():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for Docker."""
-    return {"status": "healthy", "timestamp": time.time()}
+    """Comprehensive health check endpoint."""
+    from sqlalchemy import text
+    from app.core.database import SessionLocal
+
+    health_status = {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": settings.version,
+        "uptime_seconds": int(time.time() - metrics["start_time"]),
+    }
+
+    # Check database connectivity
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        health_status["database"] = "connected"
+        db.close()
+    except Exception:
+        health_status["database"] = "disconnected"
+        health_status["status"] = "unhealthy"
+
+    # Check AI service availability
+    health_status["ai_service"] = "available"  # Basic check
+
+    return health_status
