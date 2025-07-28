@@ -6,12 +6,17 @@ from app.core.security import create_access_token, get_current_user_web
 from app.models.user import UserCreate, UserLogin, UserRead
 from app.services.user_service import UserService
 from typing import List
+from pydantic import BaseModel, Field
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/signup")
+class ErrorResponse(BaseModel):
+    detail: str = Field(..., example="Invalid credentials")
+
+
+@router.post("/signup", responses={400: {"model": ErrorResponse}})
 def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
     user_service = UserService(db)
@@ -24,9 +29,14 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         )
 
 
-@router.post("/login")
+@router.post("/login", responses={401: {"model": ErrorResponse}})
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
     """Login user and return access token."""
+    if not user_data.username or not user_data.password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Username and password are required."
+        )
     user_service = UserService(db)
     user = user_service.authenticate_user(
         user_data.username, user_data.password
@@ -43,71 +53,74 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/users", response_model=List[UserRead])
+@router.get("/users", response_model=List[UserRead], responses={403: {"model": ErrorResponse}})
 def list_users(
     current_user: UserRead = Depends(get_current_user_web),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List all users (admin only)."""
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            detail="Admin access required",
         )
-    
+
     user_service = UserService(db)
     return user_service.get_all_users()
 
 
-@router.get("/admin/stats")
+@router.get("/admin/stats", responses={403: {"model": ErrorResponse}})
 def get_admin_stats(
     current_user: UserRead = Depends(get_current_user_web),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get system statistics (admin only)."""
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            detail="Admin access required",
         )
-    
+
     from app.models.user import User
     from app.models.task import Task
-    
+
     # Get basic stats
     total_users = db.query(User).count()
     total_tasks = db.query(Task).count()
-    active_tasks = db.query(Task).filter(
-        Task.status.in_(["todo", "in_progress"])
-    ).count()
+    active_tasks = (
+        db.query(Task).filter(Task.status.in_(["todo", "in_progress"])).count()
+    )
     completed_tasks = db.query(Task).filter(Task.status == "done").count()
-    
+
     # Get user activity stats
     user_stats = []
     users = db.query(User).all()
     for user in users:
-        user_task_count = db.query(Task).filter(
-            Task.user_id == user.id
-        ).count()
-        user_completed_count = db.query(Task).filter(
-            Task.user_id == user.id, 
-            Task.status == "done"
-        ).count()
-        
+        user_task_count = (
+            db.query(Task).filter(Task.user_id == user.id).count()
+        )
+        user_completed_count = (
+            db.query(Task)
+            .filter(Task.user_id == user.id, Task.status == "done")
+            .count()
+        )
+
         completion_rate = 0
         if user_task_count > 0:
             completion_rate = round(
                 (user_completed_count / user_task_count * 100), 1
             )
-        
-        user_stats.append({
-            "username": user.username,
-            "is_admin": user.is_admin,
-            "total_tasks": user_task_count,
-            "completed_tasks": user_completed_count,
-            "completion_rate": completion_rate
-        })
-    
+
+        user_stats.append(
+            {
+                "username": user.username,
+                "is_admin": user.is_admin,
+                "total_tasks": user_task_count,
+                "completed_tasks": user_completed_count,
+                "completion_rate": completion_rate,
+            }
+        )
+
     return {
         "system_overview": {
             "total_users": total_users,
@@ -115,9 +128,11 @@ def get_admin_stats(
             "active_tasks": active_tasks,
             "completed_tasks": completed_tasks,
             "completion_rate": round(
-                (completed_tasks / total_tasks * 100) 
-                if total_tasks > 0 else 0, 1
-            )
+                (completed_tasks / total_tasks * 100)
+                if total_tasks > 0
+                else 0,
+                1,
+            ),
         },
-        "user_activity": user_stats
+        "user_activity": user_stats,
     }

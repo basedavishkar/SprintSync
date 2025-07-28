@@ -12,29 +12,40 @@ def seed_database():
     db = SessionLocal()
 
     try:
-        # Check if we already have users
+        # Always ensure admin user exists
+        admin = db.query(User).filter_by(username="admin").first()
+        if not admin:
+            admin_user = User(
+                username="admin",
+                hashed_password=get_password_hash("admin123"),
+                is_admin=True,
+            )
+            db.add(admin_user)
+            db.commit()
+            print(
+                "👑 Admin user created: username='admin', password='admin123'"
+            )
+        else:
+            print("Admin user already exists.")
+
+        # Check if we already have users (skip demo seeding if so)
         existing_users = db.query(User).count()
-        if existing_users > 0:
-            print("Database already seeded, skipping...")
+        if existing_users > 1:  # admin already handled above
+            print("Database already seeded, skipping demo users/tasks...")
             return
 
         print("Seeding database with AI development demo data...")
-
-        # Create admin user first
-        admin_user = User(
-            username="admin",
-            hashed_password=get_password_hash("admin123"),
-            is_admin=True
-        )
-        db.add(admin_user)
-        db.flush()  # Get the admin user ID
 
         # Create demo users
         users = []
         for i in range(1, 4):
             username = f"user{i}"
             hashed_password = get_password_hash("password123")
-            user = User(username=username, hashed_password=hashed_password, is_admin=False)
+            user = User(
+                username=username,
+                hashed_password=hashed_password,
+                is_admin=False,
+            )
             db.add(user)
             users.append(user)
 
@@ -165,7 +176,9 @@ def seed_database():
         ]
 
         # Assign tasks to users with realistic distribution
-        all_users = [admin_user] + users
+        all_users = [
+            db.query(User).filter_by(username="admin").first()
+        ] + users
         for i, user in enumerate(all_users):
             # Each user gets 4-6 tasks
             num_tasks = random.randint(4, 6)
