@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from app.core.security import get_current_user
+from app.core.security import get_current_user_web
 from app.core.database import get_db
 from app.models.user import User
 from app.services.ai_service import ai_service
@@ -40,7 +40,7 @@ class ErrorResponse(BaseModel):
 )
 async def suggest_task(
     req: SuggestRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_web),
     db: Session = Depends(get_db),
 ):
     """AI-powered task suggestion endpoint."""
