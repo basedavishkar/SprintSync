@@ -20,12 +20,21 @@ def seed_database():
 
         print("Seeding database with AI development demo data...")
 
+        # Create admin user first
+        admin_user = User(
+            username="admin",
+            hashed_password=get_password_hash("admin123"),
+            is_admin=True
+        )
+        db.add(admin_user)
+        db.flush()  # Get the admin user ID
+
         # Create demo users
         users = []
         for i in range(1, 4):
             username = f"user{i}"
             hashed_password = get_password_hash("password123")
-            user = User(username=username, hashed_password=hashed_password)
+            user = User(username=username, hashed_password=hashed_password, is_admin=False)
             db.add(user)
             users.append(user)
 
@@ -156,7 +165,8 @@ def seed_database():
         ]
 
         # Assign tasks to users with realistic distribution
-        for i, user in enumerate(users):
+        all_users = [admin_user] + users
+        for i, user in enumerate(all_users):
             # Each user gets 4-6 tasks
             num_tasks = random.randint(4, 6)
             user_tasks = random.sample(ai_tasks, num_tasks)
@@ -177,8 +187,9 @@ def seed_database():
 
         db.commit()
         print(
-            f"✅ Created {len(users)} users and {len(users) * 5} AI development tasks"
+            f"✅ Created {len(all_users)} users (including admin) and {len(all_users) * 5} AI development tasks"
         )
+        print("👑 Admin user: username='admin', password='admin123'")
         print("📋 Sample tasks include:")
         print("   • RAG system implementation")
         print("   • LLM fine-tuning")

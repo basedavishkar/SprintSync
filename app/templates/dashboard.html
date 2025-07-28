@@ -1,237 +1,286 @@
-{% extends "base.html" %}
-
-{% block title %}Dashboard - SprintSync{% endblock %}
-
-{% block content %}
-<div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-6">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900">SprintSync</h1>
-                    <p class="text-gray-600">Welcome back, {{ user.username }}!</p>
-                </div>
-                <div class="flex items-center space-x-4">
-                                        <button 
-                        data-action="open-modal"
-                        class="btn-primary">
-                        + New Task
-                    </button>
-                    <form method="POST" action="/auth/logout" class="inline">
-                        <button type="submit" class="text-gray-600 hover:text-gray-800 text-sm">
-                            Logout
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- AI Suggestions Section -->
-        <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">AI-Powered Suggestions</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Task Description Generator -->
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Generate Task Description</h3>
-                    <div class="space-y-3">
-                        <input
-                            type="text"
-                            id="aiTaskTitle"
-                            placeholder="Enter task title (e.g., 'eat healthy')"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button
-                            data-action="ai-suggest"
-                            data-mode="draft"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                            Generate Description
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Daily Plan Generator -->
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Daily Productivity Plan</h3>
-                    <button
-                        data-action="ai-suggest"
-                        data-mode="plan"
-                        class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                        Generate Daily Plan
-                    </button>
-                </div>
-            </div>
-
-            <!-- AI Response Display -->
-            <div id="aiResponse" class="mt-6 p-4 bg-gray-50 rounded-md hidden">
-                <h4 class="font-medium text-gray-900 mb-2">AI Suggestion:</h4>
-                <div id="aiResponseText" class="text-gray-700 whitespace-pre-wrap"></div>
-            </div>
-        </div>
-
-        <!-- Tasks Section -->
-        <div class="bg-white rounded-lg shadow-sm border">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-semibold text-gray-900">Your Tasks</h2>
-                    <div class="flex items-center space-x-4">
-                        <button
-                            data-action="test-create"
-                            class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
-                            Test Create
-                        </button>
-                        <span class="text-sm text-gray-600">
-                            Total: {{ tasks|length }} tasks
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SprintSync - Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">SprintSync</h1>
+                        <span class="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                            AI-Powered Task Management
                         </span>
                     </div>
+                    <div class="flex items-center space-x-4">
+                        {% if current_user.is_admin %}
+                        <span class="px-3 py-1 text-sm font-medium bg-purple-100 text-purple-800 rounded-full">
+                            👑 Admin
+                        </span>
+                        {% endif %}
+                        <span class="text-sm text-gray-600">Welcome, {{ current_user.username }}</span>
+                        <form method="POST" action="/auth/logout" class="inline">
+                            <button type="submit" class="text-sm text-red-600 hover:text-red-800 bg-transparent border-none cursor-pointer">Logout</button>
+                        </form>
+                    </div>
                 </div>
             </div>
+        </header>
 
-            <div class="p-6">
-                {% if tasks %}
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {% for task in tasks %}
-                        <div class="bg-gray-50 rounded-lg p-4 border">
-                            <div class="flex justify-between items-start mb-3">
-                                <h3 class="font-medium text-gray-900">{{ task.title }}</h3>
-                                <span class="px-2 py-1 text-xs rounded-full
-                                    {% if task.status == 'todo' %}bg-yellow-100 text-yellow-800
-                                    {% elif task.status == 'in_progress' %}bg-blue-100 text-blue-800
-                                    {% elif task.status == 'done' %}bg-green-100 text-green-800
-                                    {% endif %}">
-                                    {{ task.status.replace('_', ' ').title() }}
-                                </span>
-                            </div>
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Admin Stats Section (Admin Only) -->
+            {% if current_user.is_admin %}
+            <div class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">System Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <div class="text-2xl font-bold text-blue-600" id="total-users">-</div>
+                        <div class="text-sm text-gray-600">Total Users</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <div class="text-2xl font-bold text-green-600" id="total-tasks">-</div>
+                        <div class="text-sm text-gray-600">Total Tasks</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <div class="text-2xl font-bold text-yellow-600" id="active-tasks">-</div>
+                        <div class="text-sm text-gray-600">Active Tasks</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <div class="text-2xl font-bold text-purple-600" id="completion-rate">-</div>
+                        <div class="text-sm text-gray-600">Completion Rate</div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-md font-semibold text-gray-900 mb-4">User Activity</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tasks</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="user-activity-table">
+                                <!-- User activity data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
-                            {% if task.description %}
-                            <p class="text-gray-600 text-sm mb-3">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
-                            {% endif %}
-
-                            <div class="flex justify-between items-center text-xs text-gray-500 mb-3">
-                                <span>Created: {{ task.created_at.strftime('%Y-%m-%d') }}</span>
-                                {% if task.total_minutes %}
-                                <span>{{ task.total_minutes }} min</span>
-                                {% endif %}
-                            </div>
-
-                            <div class="flex space-x-2">
-                                <form hx-post="/tasks/{{ task.id }}/status" 
-                                      hx-target="closest .bg-gray-50" 
-                                      hx-swap="outerHTML"
-                                      hx-trigger="change">
-                                    <select name="status" class="text-xs border rounded px-2 py-1">
-                                        <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>Todo</option>
-                                        <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                                        <option value="done" {% if task.status == 'done' %}selected{% endif %}>Done</option>
-                                    </select>
-                                </form>
-
-                                <button
-                                    onclick="deleteTask({{ task.id }})"
-                                    class="text-xs text-red-600 hover:text-red-800">
-                                    Delete
+            <!-- Task Management Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Task Creation -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Create New Task</h2>
+                        <form hx-post="/tasks/" hx-target="#task-list" hx-swap="outerHTML" hx-include="[name='csrfmiddlewaretoken']">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+                                    <input type="text" name="title" id="title" required
+                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                    <textarea name="description" id="description" rows="3"
+                                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                </div>
+                                <div>
+                                    <label for="total_minutes" class="block text-sm font-medium text-gray-700">Estimated Minutes</label>
+                                    <input type="number" name="total_minutes" id="total_minutes" min="0"
+                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <button type="submit"
+                                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                    Create Task
                                 </button>
                             </div>
+                        </form>
+                    </div>
+
+                    <!-- AI Suggestions -->
+                    <div class="bg-white p-6 rounded-lg shadow mt-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">AI Assistant</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="ai-title" class="block text-sm font-medium text-gray-700">Quick Task Title</label>
+                                <input type="text" name="ai-title" id="ai-title" placeholder="e.g., 'Fix login bug'"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <button onclick="getAISuggestion('draft')"
+                                    class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                Generate Description
+                            </button>
+                            <button onclick="getAISuggestion('plan')"
+                                    class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                                Get Daily Plan
+                            </button>
                         </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="text-center py-12">
-                        <div class="text-gray-400 mb-4">
-                            <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
+                        <div id="ai-response" class="mt-4 p-3 bg-gray-50 rounded-md hidden">
+                            <div id="ai-content"></div>
                         </div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
-                        <p class="text-gray-600 mb-4">Get started by creating your first task!</p>
-                        <button
-                            data-action="open-modal"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                            Create Your First Task
-                        </button>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </main>
-</div>
-
-<!-- Create Task Modal -->
-<div id="createTaskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Create New Task</h3>
-                <button
-                    data-action="close-modal"
-                    class="text-gray-400 hover:text-gray-600 text-xl font-bold">
-                    ×
-                </button>
-            </div>
-
-            <form id="createTaskForm">
-                <div class="space-y-4">
-                    <div>
-                        <label for="taskTitle" class="block text-sm font-medium text-gray-700 mb-1">
-                            Task Title *
-                        </label>
-                        <input
-                            type="text"
-                            id="taskTitle"
-                            name="title"
-                            required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-
-                    <div>
-                        <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">
-                            Description
-                        </label>
-                        <textarea
-                            id="taskDescription"
-                            name="description"
-                            rows="4"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
-
-                    <div>
-                        <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
-                            Status
-                        </label>
-                        <select
-                            id="taskStatus"
-                            name="status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="todo">Todo</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="done">Done</option>
-                        </select>
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button
-                        type="button"
-                        data-action="close-modal"
-                        class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                        Create Task
-                    </button>
+                <!-- Task List -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-lg font-semibold text-gray-900">Your Tasks</h2>
+                        </div>
+                        <div id="task-list" class="p-6">
+                            <!-- Tasks will be loaded here -->
+                        </div>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </main>
     </div>
-</div>
-{% endblock %}
 
-{% block scripts %}
-<script src="/static/js/dashboard.js"></script>
+    <script>
+        // Configure HTMX to include credentials
+        htmx.config.includeIndicatorStyles = false;
+        htmx.config.withCredentials = true;
+        
+        // Load tasks on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTasks();
+            {% if current_user.is_admin %}
+            loadAdminStats();
+            {% endif %}
+        });
 
+        function loadTasks() {
+            fetch('/web/tasks/', {
+                credentials: 'include'
+            })
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('task-list').innerHTML = html;
+                });
+        }
 
-{% endblock %}
+        {% if current_user.is_admin %}
+        function loadAdminStats() {
+            fetch('/auth/admin/stats', {
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load admin stats');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.system_overview) {
+                        document.getElementById('total-users').textContent = data.system_overview.total_users;
+                        document.getElementById('total-tasks').textContent = data.system_overview.total_tasks;
+                        document.getElementById('active-tasks').textContent = data.system_overview.active_tasks;
+                        document.getElementById('completion-rate').textContent = data.system_overview.completion_rate + '%';
+                        
+                        // Populate user activity table
+                        const tableBody = document.getElementById('user-activity-table');
+                        tableBody.innerHTML = '';
+                        
+                        if (data.user_activity) {
+                            data.user_activity.forEach(user => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        ${user.username} ${user.is_admin ? '👑' : ''}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        ${user.is_admin ? 'Admin' : 'User'}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.total_tasks}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.completed_tasks}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.completion_rate}%</td>
+                                `;
+                                tableBody.appendChild(row);
+                            });
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading admin stats:', error);
+                    // Set default values or show error message
+                    document.getElementById('total-users').textContent = '-';
+                    document.getElementById('total-tasks').textContent = '-';
+                    document.getElementById('active-tasks').textContent = '-';
+                    document.getElementById('completion-rate').textContent = '-';
+                });
+        }
+        {% endif %}
+
+        function getAISuggestion(mode) {
+            const title = document.getElementById('ai-title').value;
+            if (!title && mode === 'draft') {
+                alert('Please enter a task title for AI description generation.');
+                return;
+            }
+
+            const responseDiv = document.getElementById('ai-response');
+            const contentDiv = document.getElementById('ai-content');
+            
+            responseDiv.classList.remove('hidden');
+            contentDiv.innerHTML = '<div class="text-gray-600">🤖 AI is thinking...</div>';
+
+            const data = { mode: mode };
+            if (mode === 'draft') {
+                data.title = title;
+            }
+
+            fetch('/ai/suggest', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    contentDiv.innerHTML = `<div class="text-red-600">❌ ${data.error}</div>`;
+                } else {
+                    contentDiv.innerHTML = `<div class="text-gray-800">${data.suggestion}</div>`;
+                }
+            })
+            .catch(error => {
+                contentDiv.innerHTML = `<div class="text-red-600">❌ Error: ${error.message}</div>`;
+            });
+        }
+
+        function updateTaskStatus(taskId, status) {
+            fetch(`/tasks/${taskId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ status: status })
+            })
+            .then(() => {
+                loadTasks();
+                {% if current_user.is_admin %}
+                loadAdminStats();
+                {% endif %}
+            });
+        }
+    </script>
+</body>
+</html>

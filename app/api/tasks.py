@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.models.task import TaskCreate, TaskRead
 
-from app.core.security import get_current_user, get_current_user_web
+from app.core.security import get_current_user_web
 from app.core.database import get_db
 from app.services.task_service import TaskService
 
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 @router.post("/", response_model=TaskRead)
 def create_task(
     task: TaskCreate,
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user_web),
     db: Session = Depends(get_db),
 ):
     """Create a new task."""
@@ -27,7 +27,7 @@ def create_task(
 
 @router.get("/", response_model=List[TaskRead])
 def list_tasks(
-    current_user=Depends(get_current_user), db: Session = Depends(get_db)
+    current_user=Depends(get_current_user_web), db: Session = Depends(get_db)
 ):
     """Get all tasks for the current user."""
     task_service = TaskService(db)
@@ -37,7 +37,7 @@ def list_tasks(
 @router.get("/{task_id}", response_model=TaskRead)
 def get_task(
     task_id: int,
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user_web),
     db: Session = Depends(get_db),
 ):
     """Get a specific task by ID."""
@@ -52,7 +52,7 @@ def get_task(
 def update_task(
     task_id: int,
     task: TaskCreate,
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user_web),
     db: Session = Depends(get_db),
 ):
     """Update a task."""
@@ -66,7 +66,7 @@ def update_task(
 @router.delete("/{task_id}")
 def delete_task(
     task_id: int,
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user_web),
     db: Session = Depends(get_db),
 ):
     """Delete a task."""

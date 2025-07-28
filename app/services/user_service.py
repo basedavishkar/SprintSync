@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user import User, UserCreate
 from app.core.security import get_password_hash, verify_password
+from typing import List
 
 
 class UserService:
@@ -52,3 +53,7 @@ class UserService:
     def get_user_by_id(self, user_id: int) -> User:
         """Get user by ID."""
         return self.db.query(User).filter(User.id == user_id).first()
+
+    def get_all_users(self) -> List[User]:
+        """Get all users (admin only)."""
+        return self.db.query(User).all()

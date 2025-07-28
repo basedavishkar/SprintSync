@@ -64,7 +64,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         if (response.ok) {
             const data = await response.json();
             // Store token in cookie
-            document.cookie = `token=${data.access_token}; path=/`;
+            document.cookie = `token=${data.access_token}; path=/; samesite=lax; max-age=3600`;
             window.location.href = '/dashboard';
         } else {
             const errorData = await response.json();
