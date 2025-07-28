@@ -4,39 +4,59 @@
     <a href="/login" class="text-blue-600 hover:text-blue-800">Please login</a>
 </div>
 {% elif tasks %}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
     {% for task in tasks %}
-    <div class="bg-gray-50 rounded-lg p-4 border">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200 hover:-translate-y-1 min-h-[220px] flex flex-col">
         <div class="flex justify-between items-start mb-3">
-            <h3 class="font-medium text-gray-900">{{ task.title }}</h3>
-            <span class="px-2 py-1 text-xs rounded-full
+            <h3 class="font-semibold text-gray-900 text-lg leading-tight">{{ task.title }}</h3>
+            <span class="
                 {% if task.status == 'todo' %}bg-yellow-100 text-yellow-800
                 {% elif task.status == 'in_progress' %}bg-blue-100 text-blue-800
                 {% elif task.status == 'done' %}bg-green-100 text-green-800
-                {% endif %}">
+                {% endif %} px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
                 {{ task.status.replace('_', ' ').title() }}
             </span>
         </div>
 
         {% if task.description %}
-        <p class="text-gray-600 text-sm mb-3">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
+        <p class="text-gray-600 text-sm mb-4 leading-relaxed flex-grow">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
         {% endif %}
 
-        <div class="flex justify-between items-center text-xs text-gray-500 mb-3">
-            <span>Created: {{ task.created_at.strftime('%Y-%m-%d') }}</span>
-            {% if task.total_minutes %}
-            <span>{{ task.total_minutes }} min</span>
+        <div class="text-xs text-gray-500 mb-4 leading-relaxed">
+            <div class="flex items-center justify-between mb-2">
+                <span>Created: {{ task.created_at.strftime('%Y-%m-%d') }}</span>
+                {% if task.total_minutes and task.total_minutes > 0 %}
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{{ task.total_minutes }} min</span>
+                {% else %}
+                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">No time estimate</span>
+                {% endif %}
+            </div>
+            {% if current_user.is_admin %}
+            <div class="flex items-center space-x-2">
+                <span class="text-purple-600 font-semibold bg-purple-50 px-2 py-1 rounded text-xs">{{ task.user.username }}</span>
+            </div>
             {% endif %}
         </div>
 
-        <div class="flex space-x-2">
-            <select onchange="updateTaskStatus({{ task.id }}, this.value)" class="text-xs border rounded px-2 py-1">
+        <div class="flex flex-wrap gap-2 mt-auto">
+            <select onchange="updateTaskStatus({{ task.id }}, this.value)" 
+                    class="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>Todo</option>
                 <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
                 <option value="done" {% if task.status == 'done' %}selected{% endif %}>Done</option>
             </select>
 
-            <button onclick="deleteTask({{ task.id }})" class="text-xs text-red-600 hover:text-red-800">
+            {% if current_user.is_admin %}
+            <select onchange="assignTaskToUser({{ task.id }}, this.value)" 
+                    class="text-xs border border-gray-300 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors">
+                <option value="">Assign to...</option>
+                <option value="{{ task.user.id }}" selected>{{ task.user.username }} (current)</option>
+                <!-- Other users will be populated by JavaScript -->
+            </select>
+            {% endif %}
+
+            <button onclick="deleteTask({{ task.id }})" 
+                    class="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-md transition-colors">
                 Delete
             </button>
         </div>

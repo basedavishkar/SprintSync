@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Debug Tasks - SprintSync</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body class="bg-gray-50 p-8">
     <div class="max-w-4xl mx-auto">
@@ -27,10 +29,10 @@
                                 <span class="font-medium">ID: {{ task.id }}</span>
                                 <span class="ml-4 text-gray-700">{{ task.title }}</span>
                             </div>
-                            <span class="px-2 py-1 rounded text-xs font-medium
-                                {% if task.status == 'todo' %}bg-gray-100 text-gray-800
-                                {% elif task.status == 'in_progress' %}bg-blue-100 text-blue-800
-                                {% elif task.status == 'done' %}bg-green-100 text-green-800
+                            <span class="
+                                {% if task.status == 'todo' %}status-todo
+                                {% elif task.status == 'in_progress' %}status-in-progress
+                                {% elif task.status == 'done' %}status-done
                                 {% endif %}">
                                 {{ task.status }}
                             </span>

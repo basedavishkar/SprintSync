@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import List
@@ -114,9 +113,20 @@ def delete_task(
     return {"success": True}
 
 
+class StatusUpdate(BaseModel):
+    status: str = Field(..., example="in_progress")
+
+
+class TaskAssignment(BaseModel):
+    user_id: int = Field(
+        ..., 
+        example=1, 
+        description="ID of the user to assign the task to"
+    )
+
+
 @router.post(
     "/{task_id}/status",
-    response_class=HTMLResponse,
     responses={
         404: {"model": ErrorResponse},
         401: {"model": ErrorResponse},
@@ -124,23 +134,55 @@ def delete_task(
     },
 )
 def change_status(
-    request: Request,
     task_id: int,
-    status: str = Form(...),
+    status_update: StatusUpdate,
     current_user=Depends(get_current_user_web),
     db: Session = Depends(get_db),
 ):
-    """Change task status and return HTML for HTMX."""
-    if status not in ["todo", "in_progress", "done"]:
+    """Change task status."""
+    if status_update.status not in ["todo", "in_progress", "done"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid status value.",
         )
     task_service = TaskService(db)
-    task = task_service.update_task_status(task_id, current_user.id, status)
+    task = task_service.update_task_status(
+        task_id, current_user.id, status_update.status
+    )
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    return templates.TemplateResponse(
-        "task_card.html", {"request": request, "task": task}
-    )
+    return {"success": True}
+
+
+@router.post(
+    "/{task_id}/assign",
+    responses={
+        404: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+    },
+)
+def assign_task(
+    task_id: int,
+    assignment: TaskAssignment,
+    current_user=Depends(get_current_user_web),
+    db: Session = Depends(get_db),
+):
+    """Assign a task to a different user (admin only)."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can assign tasks to users.",
+        )
+    
+    task_service = TaskService(db)
+    task = task_service.assign_task_to_user(task_id, assignment.user_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task or user not found")
+
+    return {
+        "success": True, 
+        "message": f"Task assigned to user ID {assignment.user_id}"
+    }
