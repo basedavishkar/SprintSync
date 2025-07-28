@@ -29,8 +29,13 @@ def seed_database():
             print("Admin user already exists.")
 
         # Check if demo users already exist
-        demo_users_exist = db.query(User).filter(User.username.in_(["user1", "user2", "user3"])).count() >= 3
-        
+        demo_users_exist = (
+            db.query(User)
+            .filter(User.username.in_(["user1", "user2", "user3"]))
+            .count()
+            >= 3
+        )
+
         if demo_users_exist:
             print("Demo users already exist, skipping demo user creation...")
         else:
@@ -184,7 +189,9 @@ def seed_database():
         ]
 
         # Assign tasks to users with realistic distribution
-        all_users = db.query(User).all()  # Get all users including admin and demo users
+        all_users = db.query(
+            User
+        ).all()  # Get all users including admin and demo users
         for i, user in enumerate(all_users):
             # Each user gets 4-6 tasks
             num_tasks = random.randint(4, 6)
@@ -229,12 +236,16 @@ def force_reseed_demo_users():
 
     try:
         print("Force re-seeding demo users...")
-        
+
         # Delete existing demo users
-        demo_users = db.query(User).filter(User.username.in_(["user1", "user2", "user3"])).all()
+        demo_users = (
+            db.query(User)
+            .filter(User.username.in_(["user1", "user2", "user3"]))
+            .all()
+        )
         for user in demo_users:
             db.delete(user)
-        
+
         # Create new demo users
         users = []
         for i in range(1, 4):
@@ -250,7 +261,7 @@ def force_reseed_demo_users():
 
         db.commit()
         print(f"✅ Re-created {len(users)} demo users")
-        
+
     except Exception as e:
         print(f"❌ Error re-seeding demo users: {e}")
         db.rollback()
@@ -260,6 +271,7 @@ def force_reseed_demo_users():
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) > 1 and sys.argv[1] == "--force-reseed":
         force_reseed_demo_users()
     else:
