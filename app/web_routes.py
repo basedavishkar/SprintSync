@@ -76,7 +76,7 @@ async def tasks_list(request: Request, db: Session = Depends(get_db)):
     try:
         current_user = get_current_user_web(request, db)
         task_service = TaskService(db)
-        
+
         # If admin, show all tasks. Otherwise, show only user's tasks
         if current_user.is_admin:
             tasks = task_service.get_all_tasks()
@@ -144,13 +144,13 @@ async def delete_task_web(
     try:
         current_user = get_current_user_web(request, db)
         task_service = TaskService(db)
-        
+
         # If admin, allow deleting any task. Otherwise, only user's own tasks
         if current_user.is_admin:
             success = task_service.delete_task_admin(task_id)
         else:
             success = task_service.delete_task(task_id, current_user.id)
-            
+
         if not success:
             raise HTTPException(status_code=404, detail="Task not found")
         return {"success": True}
@@ -160,42 +160,39 @@ async def delete_task_web(
 
 @router.post("/web/tasks/{task_id}/assign")
 async def assign_task_web(
-    task_id: int, 
-    request: Request, 
-    db: Session = Depends(get_db)
+    task_id: int, request: Request, db: Session = Depends(get_db)
 ):
     """Assign a task to a different user via web interface (admin only)."""
     try:
         current_user = get_current_user_web(request, db)
-        
+
         if not current_user.is_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only admins can assign tasks to users.",
             )
-        
+
         # Get the user_id from the request body
         body = await request.json()
         target_user_id = body.get("user_id")
-        
+
         if not target_user_id:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="user_id is required.",
             )
-        
+
         task_service = TaskService(db)
         task = task_service.assign_task_to_user(task_id, target_user_id)
-        
+
         if not task:
             raise HTTPException(
-                status_code=404, 
-                detail="Task or user not found"
+                status_code=404, detail="Task or user not found"
             )
-        
+
         return {
-            "success": True, 
-            "message": f"Task assigned to user ID {target_user_id}"
+            "success": True,
+            "message": f"Task assigned to user ID {target_user_id}",
         }
     except HTTPException:
         raise
@@ -209,24 +206,27 @@ async def get_users_for_admin(request: Request, db: Session = Depends(get_db)):
     """Get all users for admin task assignment (admin only)."""
     try:
         current_user = get_current_user_web(request, db)
-        
+
         if not current_user.is_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only admins can access user list.",
             )
-        
+
         user_service = UserService(db)
         users = user_service.get_all_users()
-        
+
         # Return users as JSON for frontend consumption
         from fastapi.responses import JSONResponse
-        return JSONResponse({
-            "users": [
-                {"id": user.id, "username": user.username} 
-                for user in users
-            ]
-        })
+
+        return JSONResponse(
+            {
+                "users": [
+                    {"id": user.id, "username": user.username}
+                    for user in users
+                ]
+            }
+        )
     except HTTPException:
         raise
     except Exception as e:

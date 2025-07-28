@@ -145,7 +145,7 @@ def test_admin_delete_task(client):
         "/auth/signup",
         json={"username": "regular_user_delete", "password": "testpass123"},
     )
-    
+
     user_login = client.post(
         "/auth/login",
         json={"username": "regular_user_delete", "password": "testpass123"},
@@ -186,7 +186,7 @@ def test_admin_assign_task(client):
         "/auth/signup",
         json={"username": "user2_assign", "password": "testpass123"},
     )
-    
+
     # Login as first user and create a task
     user1_login = client.post(
         "/auth/login",
@@ -211,7 +211,7 @@ def test_admin_assign_task(client):
         json={"username": "user2_assign", "password": "testpass123"},
     )
     user2_token = user2_login.json()["access_token"]
-    
+
     # Create a task for user2 to ensure they exist in the system
     client.post(
         "/tasks/",
@@ -222,7 +222,7 @@ def test_admin_assign_task(client):
         },
         headers={"Authorization": f"Bearer {user2_token}"},
     )
-    
+
     # Get user2's tasks to find their user ID
     user2_tasks = client.get(
         "/tasks/",
@@ -230,7 +230,7 @@ def test_admin_assign_task(client):
     )
     user2_task = user2_tasks.json()[0]
     user2_id = user2_task["user_id"]
-    
+
     # Test that regular user cannot assign tasks (should be 403)
     response = client.post(
         f"/tasks/{task_id}/assign",
@@ -238,7 +238,7 @@ def test_admin_assign_task(client):
         headers={"Authorization": f"Bearer {user1_token}"},
     )
     assert response.status_code == 403
-    
+
     # Test that non-existent task returns 403 (admin check happens first)
     response = client.post(
         "/tasks/99999/assign",

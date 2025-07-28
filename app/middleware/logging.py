@@ -37,4 +37,4 @@ def configure_logging():
         ],
     )
 
-    return structlog.get_logger() 
+    return structlog.get_logger()

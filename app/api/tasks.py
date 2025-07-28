@@ -119,9 +119,7 @@ class StatusUpdate(BaseModel):
 
 class TaskAssignment(BaseModel):
     user_id: int = Field(
-        ..., 
-        example=1, 
-        description="ID of the user to assign the task to"
+        ..., example=1, description="ID of the user to assign the task to"
     )
 
 
@@ -176,13 +174,13 @@ def assign_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can assign tasks to users.",
         )
-    
+
     task_service = TaskService(db)
     task = task_service.assign_task_to_user(task_id, assignment.user_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task or user not found")
 
     return {
-        "success": True, 
-        "message": f"Task assigned to user ID {assignment.user_id}"
+        "success": True,
+        "message": f"Task assigned to user ID {assignment.user_id}",
     }

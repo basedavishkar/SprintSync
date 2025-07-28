@@ -100,7 +100,7 @@ async def observability_middleware(request: Request, call_next):
 def get_metrics():
     """Get application metrics in Prometheus format."""
     from app.core.config import settings
-    
+
     current_time = time.time()
     uptime = current_time - metrics["start_time"]
 
@@ -123,4 +123,4 @@ def get_metrics():
         f'app="{settings.app_name}"}} 1',
     ]
 
-    return "\n".join(lines) 
+    return "\n".join(lines)
