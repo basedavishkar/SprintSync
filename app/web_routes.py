@@ -201,7 +201,7 @@ async def assign_task_web(
         raise HTTPException(status_code=403, detail="Not authenticated")
 
 
-@router.get("/web/users", response_class=HTMLResponse)
+@router.get("/web/users")
 async def get_users_for_admin(request: Request, db: Session = Depends(get_db)):
     """Get all users for admin task assignment (admin only)."""
     try:

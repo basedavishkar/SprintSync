@@ -410,11 +410,21 @@
                 credentials: 'include',
                 body: JSON.stringify({ status: status })
             })
-            .then(() => {
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
                 loadTasks();
                 {% if current_user.is_admin %}
                 loadAdminStats();
                 {% endif %}
+            })
+            .catch(error => {
+                console.error('Error updating task status:', error);
+                alert('Error updating task status. Please try again.');
             });
         }
 
@@ -426,32 +436,54 @@
             fetch('/web/users', {
                 credentials: 'include'
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                allUsers = data.users;
-                populateUserAssignmentDropdowns();
+                if (data && data.users) {
+                    allUsers = data.users;
+                    populateUserAssignmentDropdowns();
+                } else {
+                    console.error('Invalid response format:', data);
+                }
             })
             .catch(error => {
                 console.error('Error loading users:', error);
+                // Set a fallback - at least show the current user
+                allUsers = [{"id": {{ current_user.id }}, "username": "{{ current_user.username }}"}];
+                populateUserAssignmentDropdowns();
             });
         }
 
         function populateUserAssignmentDropdowns() {
             const dropdowns = document.querySelectorAll('select[onchange*="assignTaskToUser"]');
-            dropdowns.forEach(dropdown => {
+            
+            dropdowns.forEach((dropdown, index) => {
                 const currentUserId = dropdown.querySelector('option[selected]')?.value;
+                
                 dropdown.innerHTML = '<option value="">Assign to...</option>';
                 
-                allUsers.forEach(user => {
+                if (allUsers && allUsers.length > 0) {
+                    allUsers.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.username;
+                        if (user.id.toString() === currentUserId) {
+                            option.selected = true;
+                            option.textContent += ' (current)';
+                        }
+                        dropdown.appendChild(option);
+                    });
+                } else {
+                    // Fallback if no users loaded
                     const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = user.username;
-                    if (user.id.toString() === currentUserId) {
-                        option.selected = true;
-                        option.textContent += ' (current)';
-                    }
+                    option.value = "";
+                    option.textContent = "No users available";
                     dropdown.appendChild(option);
-                });
+                }
             });
         }
 
@@ -466,7 +498,12 @@
                 credentials: 'include',
                 body: JSON.stringify({ user_id: parseInt(userId) })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     loadTasks();

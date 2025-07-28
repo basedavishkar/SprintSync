@@ -48,7 +48,8 @@
 
             {% if current_user.is_admin %}
             <select onchange="assignTaskToUser({{ task.id }}, this.value)" 
-                    class="text-xs border border-gray-300 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors">
+                    class="text-xs border border-gray-300 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                    data-task-id="{{ task.id }}">
                 <option value="">Assign to...</option>
                 <option value="{{ task.user.id }}" selected>{{ task.user.username }} (current)</option>
                 <!-- Other users will be populated by JavaScript -->
