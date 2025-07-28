@@ -87,7 +87,7 @@
                 <div class="lg:col-span-1">
                     <div class="bg-white p-6 rounded-lg shadow">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Create New Task</h2>
-                        <form hx-post="/tasks/" hx-target="#task-list" hx-swap="outerHTML" hx-include="[name='csrfmiddlewaretoken']">
+                        <form hx-post="/web/tasks/" hx-target="#task-list" hx-swap="outerHTML">
                             <div class="space-y-4">
                                 <div>
                                     <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
@@ -263,6 +263,38 @@
             .catch(error => {
                 contentDiv.innerHTML = `<div class="text-red-600">❌ Error: ${error.message}</div>`;
             });
+        }
+
+        function loadTasks() {
+            fetch('/web/tasks/', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('task-list').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error loading tasks:', error);
+            });
+        }
+
+        function deleteTask(taskId) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                fetch(`/web/tasks/${taskId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                })
+                .then(() => {
+                    loadTasks();
+                    {% if current_user.is_admin %}
+                    loadAdminStats();
+                    {% endif %}
+                });
+            }
         }
 
         function updateTaskStatus(taskId, status) {

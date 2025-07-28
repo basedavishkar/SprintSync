@@ -55,22 +55,4 @@
 </div>
 {% endif %}
 
-<script>
-function deleteTask(taskId) {
-    if (confirm('Are you sure you want to delete this task?')) {
-                       fetch(`/web/tasks/${taskId}`, {
-                   method: 'DELETE',
-                   headers: {
-                       'Content-Type': 'application/json',
-                   },
-                   credentials: 'include'
-               })
-        .then(() => {
-            loadTasks();
-            {% if current_user.is_admin %}
-            loadAdminStats();
-            {% endif %}
-        });
-    }
-}
-</script> 
+ 

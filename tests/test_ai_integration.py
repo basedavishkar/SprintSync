@@ -55,4 +55,4 @@ def test_ai_suggest_without_auth(client):
     response = client.post(
         "/ai/suggest", json={"title": "Test Task", "mode": "draft"}
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
